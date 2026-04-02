@@ -1,0 +1,167 @@
+<script>
+const API_URL = 'https://example.com/disruptions.json'; // replace with real endpoint
+const REFRESH = 10 * 60 * 1000;
+
+let allData = [];
+let filters = { status: 'all', impact: 'all' };
+let globe;
+let rotTimer;
+let selectedPoint = null;
+
+// ── Globe ─────────────────────────────────────────
+function initGlobe() {
+  const el = document.getElementById('globeViz');
+
+  globe = Globe()(el)
+    .width(el.clientWidth)
+    .height(el.clientHeight)
+    .backgroundColor('#060a0d')
+
+    // DARK BLOOMBERG STYLE
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
+
+    .atmosphereColor('#1a8fff')
+    .atmosphereAltitude(0.08)
+
+    .pointsData([])
+    .pointLat(d => d.lat)
+    .pointLng(d => d.lng)
+
+    // BETTER VISIBILITY
+    .pointAltitude(d => d.impact === 'High' ? 0.06 : 0.035)
+    .pointRadius(d => d.impact === 'High' ? 0.9 : d.impact === 'Medium' ? 0.7 : 0.55)
+
+    // CLEAN COLORS
+    .pointColor(d => {
+      if (d.status === 'Shutdown') return '#ff4d4d';
+      if (d.status === 'Reduced') return '#ffcc33';
+      return '#4db8ff';
+    })
+
+    .pointResolution(16)
+    .pointLabel(() => '')
+
+    .onPointHover(onHover)
+    .onPointClick(onClick);
+
+  globe.pointOfView({ lat: 27, lng: 51, altitude: 1.9 }, 0);
+
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.08;
+
+  window.addEventListener('resize', () => {
+    globe.width(el.clientWidth).height(el.clientHeight);
+  });
+}
+
+// ── INTERACTION FIXES ─────────────────────────────
+function onClick(pt, evt) {
+  if (!pt) return;
+
+  selectedPoint = pt;
+
+  globe.controls().autoRotate = false;
+  clearTimeout(rotTimer);
+
+  showTip(pt, evt);
+}
+
+function onHover(pt, _, evt) {
+  if (selectedPoint) return;
+  pt ? showTip(pt, evt) : hideTip();
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#tooltip') && !e.target.closest('canvas')) {
+    selectedPoint = null;
+    hideTip();
+    globe.controls().autoRotate = true;
+  }
+});
+
+// ── TOOLTIP ───────────────────────────────────────
+const tip = document.getElementById('tooltip');
+
+function showTip(d, evt) {
+  document.getElementById('tt-co').textContent = d.company;
+  document.getElementById('tt-ctry').textContent = d.country;
+
+  document.getElementById('tt-status').innerHTML = d.status;
+  document.getElementById('tt-start').textContent = d.start;
+  document.getElementById('tt-prod').textContent = d.products.join(', ');
+  document.getElementById('tt-cap').textContent = d.capacity;
+  document.getElementById('tt-imp').textContent = d.impact;
+  document.getElementById('tt-conf').textContent = d.confidence;
+  document.getElementById('tt-src').textContent = d.source;
+
+  const x = evt.clientX;
+  const y = evt.clientY;
+
+  tip.style.left = (x + 15) + 'px';
+  tip.style.top = (y - 15) + 'px';
+
+  tip.classList.add('visible');
+}
+
+function hideTip() {
+  tip.classList.remove('visible');
+}
+
+// ── DATA FETCH ───────────────────────────────────
+async function fetchData() {
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+
+    if (!Array.isArray(json)) throw new Error();
+
+    allData = json;
+    document.getElementById('error-banner').style.display = 'none';
+  } catch {
+    allData = FALLBACK_DATA;
+    document.getElementById('error-banner').style.display = 'block';
+  }
+
+  renderGlobe();
+  renderStats();
+
+  document.getElementById('upd-time').textContent =
+    new Date().toLocaleTimeString() + " (live)";
+}
+
+// ── RENDER ───────────────────────────────────────
+function getVisible() {
+  return allData.filter(d => {
+    if (filters.status !== 'all' && d.status !== filters.status) return false;
+    if (filters.impact !== 'all' && d.impact !== filters.impact) return false;
+    return true;
+  });
+}
+
+function renderGlobe() {
+  globe.pointsData(getVisible());
+}
+
+function renderStats() {
+  document.getElementById('cnt-sd').textContent =
+    allData.filter(d => d.status === 'Shutdown').length;
+  document.getElementById('cnt-rd').textContent =
+    allData.filter(d => d.status === 'Reduced').length;
+  document.getElementById('cnt-mt').textContent =
+    allData.filter(d => d.status === 'Maintenance').length;
+}
+
+// ── MANUAL REFRESH (press R) ─────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'r') fetchData();
+});
+
+// ── INIT ─────────────────────────────────────────
+async function boot() {
+  initGlobe();
+  await fetchData();
+  setInterval(fetchData, REFRESH);
+}
+
+window.addEventListener('load', boot);
+</script>
