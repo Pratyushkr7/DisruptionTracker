@@ -1,590 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ChemDisrupt — Middle East Crisis Tracker</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-
-  :root {
-    --bg: #060a0d;
-    --surface: #0c1318;
-    --surface2: #101820;
-    --border: #1c2b38;
-    --border2: #243444;
-    --text: #c4d4e4;
-    --text-dim: #556e85;
-    --text-muted: #2e4055;
-    --accent: #1a8fff;
-    --accent-dim: #0b3f7a;
-    --red: #ff3030;
-    --yellow: #f0b429;
-    --blue: #38b2ff;
-    --green: #1fd67a;
-    --font-mono: 'IBM Plex Mono', monospace;
-    --font-sans: 'IBM Plex Sans', sans-serif;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-sans);
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
-  }
-
-  /* ── Header ── */
-  #header {
-    position: fixed; top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 11px 20px;
-    background: linear-gradient(180deg, rgba(6,10,13,0.98) 0%, rgba(6,10,13,0.82) 100%);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(10px);
-  }
-
-  #header-left { display: flex; align-items: center; gap: 13px; }
-
-  #logo-mark {
-    width: 26px; height: 26px;
-    background: var(--accent);
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-    animation: pulse-logo 3s ease-in-out infinite;
-    flex-shrink: 0;
-  }
-  @keyframes pulse-logo {
-    0%,100% { filter: brightness(1); }
-    50% { filter: brightness(1.35) drop-shadow(0 0 7px rgba(26,143,255,0.7)); }
-  }
-
-  #app-title { font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: #ddeeff; }
-  #app-subtitle { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); letter-spacing: 0.05em; margin-top: 1px; }
-
-  #header-center { display: flex; align-items: center; gap: 8px; }
-
-  .stat-chip {
-    display: flex; align-items: center; gap: 6px;
-    padding: 4px 9px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    font-family: var(--font-mono); font-size: 10px;
-  }
-  .stat-dot { width: 6px; height: 6px; border-radius: 50%; animation: blink 2s ease-in-out infinite; }
-  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
-  .stat-dot.red { background: var(--red); box-shadow: 0 0 5px var(--red); }
-  .stat-dot.yellow { background: var(--yellow); box-shadow: 0 0 5px var(--yellow); }
-  .stat-dot.blue { background: var(--blue); box-shadow: 0 0 5px var(--blue); }
-  .stat-count { color: #e0f0ff; font-weight: 600; }
-  .stat-label { color: var(--text-dim); }
-
-  #header-right { display: flex; align-items: center; gap: 12px; }
-
-  #crisis-badge {
-    display: flex; align-items: center; gap: 5px;
-    padding: 3px 9px;
-    background: rgba(255,48,48,0.08);
-    border: 1px solid rgba(255,48,48,0.3);
-    border-radius: 2px;
-    font-family: var(--font-mono); font-size: 9px;
-    color: #ff7070; letter-spacing: 0.08em; text-transform: uppercase;
-  }
-  #crisis-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--red); animation: blink 1s ease-in-out infinite; }
-
-  #last-updated { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0.04em; }
-  #last-updated span { color: var(--text-dim); }
-
-  /* ── Globe ── */
-  #globe-container { position: fixed; inset: 0; z-index: 1; }
-  #globeViz { width: 100%; height: 100%; }
-
-  /* ── Filters ── */
-  #filters {
-    position: fixed; top: 60px; right: 16px;
-    z-index: 100; width: 188px;
-    background: rgba(10,16,22,0.94);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    backdrop-filter: blur(14px);
-    overflow: hidden;
-  }
-  #filters-header {
-    padding: 7px 12px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    font-family: var(--font-mono); font-size: 8.5px;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--text-dim);
-    display: flex; align-items: center; gap: 6px;
-  }
-  #filters-header::before { content:''; width:3px; height:3px; background:var(--accent); border-radius:50%; }
-  .filter-section { padding: 9px 11px; border-bottom: 1px solid var(--border); }
-  .filter-section:last-child { border-bottom: none; }
-  .filter-label { font-family: var(--font-mono); font-size: 7.5px; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
-  .filter-options { display: flex; flex-direction: column; gap: 3px; }
-  .filter-btn {
-    display: flex; align-items: center; gap: 7px;
-    padding: 5px 7px;
-    background: transparent; border: 1px solid var(--border);
-    border-radius: 1px; cursor: pointer; transition: all 0.12s;
-    font-family: var(--font-mono); font-size: 9.5px;
-    color: var(--text-dim); text-align: left; width: 100%;
-  }
-  .filter-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
-  .filter-btn.active { background: rgba(26,143,255,0.07); border-color: var(--accent-dim); color: var(--text); }
-  .filter-btn .fdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .filter-btn .fcheck { margin-left: auto; width: 10px; height: 10px; opacity: 0; transition: opacity 0.12s; }
-  .filter-btn.active .fcheck { opacity: 1; }
-
-  /* ── Tooltip ── */
-  #tooltip {
-    position: fixed; z-index: 200;
-    pointer-events: none;
-    opacity: 0; transform: translateY(5px);
-    transition: opacity 0.14s, transform 0.14s;
-    min-width: 235px; max-width: 295px;
-  }
-  #tooltip.visible { opacity: 1; transform: translateY(0); }
-
-  .tt-card {
-    background: #07101a;
-    border: 1px solid #243850;
-    border-radius: 2px; overflow: hidden;
-    box-shadow: 0 12px 44px rgba(0,0,0,0.85), 0 0 0 1px rgba(26,143,255,0.05), inset 0 1px 0 rgba(255,255,255,0.025);
-  }
-  .tt-header { padding: 9px 12px 8px; border-bottom: 1px solid #1c2d3e; background: #0b1825; }
-  .tt-company { font-family: var(--font-sans); font-size: 11.5px; font-weight: 600; color: #e4f0ff; line-height: 1.3; }
-  .tt-country { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); margin-top: 2px; }
-  .tt-body { padding: 9px 12px 9px; }
-  .tt-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; font-family: var(--font-mono); font-size: 9px; line-height: 1.4; }
-  .tt-row:last-child { margin-bottom: 0; }
-  .tt-key { color: var(--text-muted); min-width: 70px; flex-shrink: 0; }
-  .tt-val { color: #b8d0e8; font-weight: 500; }
-  .tt-div { height: 1px; background: #1a2d3e; margin: 6px 0; }
-  .tt-source { padding: 5px 12px; border-top: 1px solid #1a2d3e; background: #060f18; font-family: var(--font-mono); font-size: 7.5px; color: var(--text-muted); }
-  .tt-source span { color: #3a6a9a; }
-
-  .spill { display:inline-flex; align-items:center; padding:1px 6px; border-radius:1px; font-family:var(--font-mono); font-size:8.5px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; }
-  .s-red { background:rgba(255,48,48,0.12); color:#ff7070; border:1px solid rgba(255,48,48,0.28); }
-  .s-yellow { background:rgba(240,180,41,0.12); color:#f5c84a; border:1px solid rgba(240,180,41,0.28); }
-  .s-blue { background:rgba(56,178,255,0.1); color:#5ec9ff; border:1px solid rgba(56,178,255,0.28); }
-
-  .imp-high { color: #ff7070; font-weight:600; }
-  .imp-med { color: #f5c84a; }
-  .imp-low { color: #5ec9ff; }
-  .conf-confirmed { color: var(--green); font-weight:600; }
-  .conf-likely { color: #f5c84a; }
-  .conf-unverified { color: var(--text-dim); }
-
-  /* ── Legend ── */
-  #legend {
-    position: fixed; bottom: 32px; left: 18px;
-    z-index: 100;
-    background: rgba(10,16,22,0.9);
-    border: 1px solid var(--border);
-    padding: 10px 14px;
-    border-radius: 2px;
-    backdrop-filter: blur(10px);
-  }
-  .leg-title { font-family: var(--font-mono); font-size: 7.5px; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 7px; }
-  .leg-item { display:flex; align-items:center; gap:8px; margin-bottom:4px; font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); }
-  .leg-item:last-child { margin-bottom:0; }
-  .leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-
-  /* ── News ticker ── */
-  #crisis-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    z-index: 100;
-    padding: 5px 0;
-    background: rgba(5,9,13,0.92);
-    border-top: 1px solid rgba(255,48,48,0.18);
-    display: flex; align-items: center;
-    font-family: var(--font-mono); font-size: 9px;
-    backdrop-filter: blur(8px);
-    overflow: hidden;
-  }
-  #crisis-bar-label {
-    color: #ff7070; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;
-    white-space: nowrap; border-right: 1px solid rgba(255,48,48,0.22);
-    padding: 0 12px; flex-shrink:0;
-  }
-  #ticker-track { overflow: hidden; flex:1; }
-  #crisis-ticker { color: var(--text-dim); white-space: nowrap; display: inline-block; animation: ticker 55s linear infinite; }
-  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-
-  /* ── Loading ── */
-  #loading-overlay {
-    position: fixed; inset: 0; z-index: 300;
-    background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 14px;
-    transition: opacity 0.6s;
-  }
-  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
-  .load-hex { width: 36px; height: 36px; background: var(--accent); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); animation: spin 1.8s linear infinite; }
-  @keyframes spin { to{transform:rotate(360deg)} }
-  .load-text { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; animation: fade 1.5s ease-in-out infinite; }
-  @keyframes fade { 0%,100%{opacity:0.3} 50%{opacity:1} }
-
-  /* ── Vignette & scanlines ── */
-  body::before { content:''; position:fixed; inset:0; z-index:2; pointer-events:none; background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.58) 100%); }
-  body::after { content:''; position:fixed; inset:0; z-index:0; pointer-events:none; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,5,12,0.02) 2px, rgba(0,5,12,0.02) 4px); }
-
-  #error-banner {
-    position: fixed; bottom: 32px; right: 16px; z-index: 200;
-    padding: 7px 13px; background: rgba(255,48,48,0.09);
-    border: 1px solid rgba(255,48,48,0.3); border-radius: 2px;
-    font-family: var(--font-mono); font-size: 9px;
-    color: #ff7070; display: none; letter-spacing: 0.04em;
-  }
-</style>
-</head>
-<body>
-
-<div id="loading-overlay">
-  <div class="load-hex"></div>
-  <div class="load-text">Loading crisis data…</div>
-</div>
-
-<div id="header">
-  <div id="header-left">
-    <div id="logo-mark"></div>
-    <div>
-      <div id="app-title">ChemDisrupt</div>
-      <div id="app-subtitle">Middle East &amp; Hormuz Crisis — Live Chemical &amp; Energy Plant Tracker</div>
-    </div>
-  </div>
-  <div id="header-center">
-    <div class="stat-chip"><div class="stat-dot red"></div><span class="stat-count" id="cnt-sd">0</span><span class="stat-label">Shutdown/FM</span></div>
-    <div class="stat-chip"><div class="stat-dot yellow"></div><span class="stat-count" id="cnt-rd">0</span><span class="stat-label">Reduced</span></div>
-    <div class="stat-chip"><div class="stat-dot blue"></div><span class="stat-count" id="cnt-mt">0</span><span class="stat-label">Maintenance</span></div>
-  </div>
-  <div id="header-right">
-    <div id="crisis-badge"><div id="crisis-dot"></div>2026 Hormuz Crisis</div>
-    <div id="last-updated">Updated: <span id="upd-time">—</span></div>
-  </div>
-</div>
-
-<div id="globe-container"><div id="globeViz"></div></div>
-
-<div id="filters">
-  <div id="filters-header">Filters</div>
-  <div class="filter-section">
-    <div class="filter-label">Status</div>
-    <div class="filter-options">
-      <button class="filter-btn active" data-f="status" data-v="all">
-        <span class="fdot" style="background:#4a6a80"></span>All Statuses
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="filter-btn" data-f="status" data-v="Shutdown">
-        <span class="fdot" style="background:#ff3030"></span>Shutdown / FM
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="filter-btn" data-f="status" data-v="Reduced">
-        <span class="fdot" style="background:#f0b429"></span>Reduced Rates
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="filter-btn" data-f="status" data-v="Maintenance">
-        <span class="fdot" style="background:#38b2ff"></span>Maintenance
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
-  </div>
-  <div class="filter-section">
-    <div class="filter-label">Impact</div>
-    <div class="filter-options">
-      <button class="filter-btn active" data-f="impact" data-v="all">
-        <span class="fdot" style="background:#4a6a80"></span>All Impacts
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="filter-btn" data-f="impact" data-v="High">
-        <span class="fdot" style="background:#ff7070"></span>High
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="filter-btn" data-f="impact" data-v="Medium">
-        <span class="fdot" style="background:#f5c84a"></span>Medium
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="filter-btn" data-f="impact" data-v="Low">
-        <span class="fdot" style="background:#5ec9ff"></span>Low
-        <svg class="fcheck" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#1a8fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
-
-<div id="legend">
-  <div class="leg-title">Marker Status</div>
-  <div class="leg-item"><div class="leg-dot" style="background:#ff3030;box-shadow:0 0 6px #ff3030"></div>Shutdown / Force Majeure</div>
-  <div class="leg-item"><div class="leg-dot" style="background:#f0b429;box-shadow:0 0 6px #f0b429"></div>Reduced Rates</div>
-  <div class="leg-item"><div class="leg-dot" style="background:#38b2ff;box-shadow:0 0 6px #38b2ff"></div>Maintenance</div>
-</div>
-
-<div id="tooltip">
-  <div class="tt-card">
-    <div class="tt-header">
-      <div class="tt-company" id="tt-co">—</div>
-      <div class="tt-country" id="tt-ctry">—</div>
-    </div>
-    <div class="tt-body">
-      <div class="tt-row"><span class="tt-key">Status</span><span class="tt-val" id="tt-status">—</span></div>
-      <div class="tt-row"><span class="tt-key">Start</span><span class="tt-val" id="tt-start">—</span></div>
-      <div class="tt-div"></div>
-      <div class="tt-row"><span class="tt-key">Products</span><span class="tt-val" id="tt-prod">—</span></div>
-      <div class="tt-row"><span class="tt-key">Capacity</span><span class="tt-val" id="tt-cap">—</span></div>
-      <div class="tt-div"></div>
-      <div class="tt-row"><span class="tt-key">Impact</span><span class="tt-val" id="tt-imp">—</span></div>
-      <div class="tt-row"><span class="tt-key">Confidence</span><span class="tt-val" id="tt-conf">—</span></div>
-    </div>
-    <div class="tt-source">Source: <span id="tt-src">—</span></div>
-  </div>
-</div>
-
-<div id="crisis-bar">
-  <div id="crisis-bar-label">⚠ Hormuz Crisis</div>
-  <div id="ticker-track">
-    <span id="crisis-ticker">
-      QatarEnergy declares force majeure on entire LNG output after Ras Laffan strikes — Reuters, 4 Mar 2026 &nbsp;·&nbsp;
-      Saudi Aramco shuts 550,000-bpd Ras Tanura refinery after drone strike — Bloomberg, 2 Mar 2026 &nbsp;·&nbsp;
-      ADNOC shuts Ruwais refinery (922,000 bpd) after drone fire — Reuters, 10 Mar 2026 &nbsp;·&nbsp;
-      Kuwait Petroleum declares force majeure — all 3 refineries at reduced rates — Reuters, 11 Mar 2026 &nbsp;·&nbsp;
-      Bahrain Bapco Energies force majeure after Sitra refinery attack — Reuters, 9 Mar 2026 &nbsp;·&nbsp;
-      IEA: "Largest supply disruption in history of global oil market" — IEA, 12 Mar 2026 &nbsp;·&nbsp;
-      Strait of Hormuz: 90% reduction in commercial vessel transits — UKMTO, 4 Mar 2026 &nbsp;·&nbsp;
-      QatarEnergy halts polymer, urea, methanol production at Mesaieed — C&amp;EN / Reuters, 5 Mar 2026 &nbsp;·&nbsp;
-      Chevron shuts Leviathan gas field on Israeli government instruction — Reuters, 2 Mar 2026 &nbsp;·&nbsp;
-      Iran South Pars partially damaged — 70% of Iran domestic gas supply at risk — Reuters, 1 Mar 2026 &nbsp;·&nbsp;
-      Kharg Island attacked — 90% of Iran crude exports disrupted — Reuters, 2 Mar 2026 &nbsp;·&nbsp;&nbsp;&nbsp;
-      QatarEnergy declares force majeure on entire LNG output after Ras Laffan strikes — Reuters, 4 Mar 2026 &nbsp;·&nbsp;
-      Saudi Aramco shuts 550,000-bpd Ras Tanura refinery after drone strike — Bloomberg, 2 Mar 2026 &nbsp;·&nbsp;
-      ADNOC shuts Ruwais refinery (922,000 bpd) after drone fire — Reuters, 10 Mar 2026 &nbsp;·&nbsp;
-      Kuwait Petroleum declares force majeure — all 3 refineries at reduced rates — Reuters, 11 Mar 2026
-    </span>
-  </div>
-</div>
-
-<div id="error-banner">⚠ API unavailable — showing verified crisis dataset</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// VERIFIED DISRUPTION DATA — 2026 Middle East / Hormuz Crisis
-// All coordinates GPS-verified against facility locations.
-// Sources: Reuters, Bloomberg, Argus Media, C&EN, IEA, UKMTO
-// ─────────────────────────────────────────────────────────────────────────────
-const FALLBACK_DATA = [
-  {
-    id: 1,
-    company: "QatarEnergy — Ras Laffan LNG Hub",
-    country: "Qatar",
-    lat: 26.1536, lng: 51.5570,
-    // Ras Laffan Industrial City: 26°09'13"N 51°33'25"E ✓
-    status: "Shutdown", type: "Force Majeure — Iranian missile strikes",
-    start: "2026-03-04",
-    products: ["LNG", "GTL (gas-to-liquids)", "Helium"],
-    capacity: "77 Mt/yr LNG (~20% global supply)",
-    impact: "High", confidence: "Confirmed",
-    source: "Reuters / QatarEnergy, 4 Mar 2026"
-  },
-  {
-    id: 2,
-    company: "QatarEnergy — Mesaieed Petchem City",
-    country: "Qatar",
-    lat: 24.9888, lng: 51.5588,
-    // Mesaieed Industrial City: 24°59'20"N 51°33'32"E ✓
-    status: "Shutdown", type: "Force Majeure — drone attacks on complex",
-    start: "2026-03-05",
-    products: ["Polyethylene", "Urea", "Methanol", "Ethylene", "1-Hexene"],
-    capacity: "~8 Mt/yr combined",
-    impact: "High", confidence: "Confirmed",
-    source: "C&EN / Reuters, 5 Mar 2026"
-  },
-  {
-    id: 3,
-    company: "Saudi Aramco — Ras Tanura Refinery",
-    country: "Saudi Arabia",
-    lat: 26.6879, lng: 50.1634,
-    // Ras Tanura: 26°41'17"N 50°09'48"E ✓
-    status: "Shutdown", type: "Drone strike — precautionary full shutdown",
-    start: "2026-03-02",
-    products: ["Diesel", "Gasoil", "Naphtha", "Crude derivatives"],
-    capacity: "550,000 bpd",
-    impact: "High", confidence: "Confirmed",
-    source: "Bloomberg / Reuters, 2 Mar 2026"
-  },
-  {
-    id: 4,
-    company: "ADNOC — Ruwais Refinery & Borouge",
-    country: "UAE",
-    lat: 23.5500, lng: 52.7300,
-    // Ruwais Industrial Complex, Abu Dhabi: 23°33'N 52°43'E ✓
-    status: "Shutdown", type: "Drone-linked fire — precautionary full halt",
-    start: "2026-03-10",
-    products: ["Crude derivatives", "Polyethylene", "Polypropylene", "Aromatics"],
-    capacity: "922,000 bpd refining",
-    impact: "High", confidence: "Confirmed",
-    source: "Reuters / AFP, 10 Mar 2026"
-  },
-  {
-    id: 5,
-    company: "Bapco Energies — Sitra Refinery",
-    country: "Bahrain",
-    lat: 26.1551, lng: 50.6230,
-    // Sitra Industrial Area, Bahrain: 26°09'18"N 50°37'22"E ✓
-    status: "Shutdown", type: "Force Majeure — attack damage",
-    start: "2026-03-09",
-    products: ["Jet fuel", "Gasoline", "Fuel oil", "Diesel"],
-    capacity: "380,000 bpd",
-    impact: "High", confidence: "Confirmed",
-    source: "Reuters, 9 Mar 2026"
-  },
-  {
-    id: 6,
-    company: "Kuwait Petroleum — Mina Al-Ahmadi",
-    country: "Kuwait",
-    lat: 29.0567, lng: 48.1450,
-    // Mina Al-Ahmadi, Kuwait: 29°03'24"N 48°08'42"E ✓
-    status: "Reduced", type: "Force Majeure — attacks; storage tanks full",
-    start: "2026-03-11",
-    products: ["Crude derivatives", "LPG", "Naphtha", "Gasoline"],
-    capacity: "466,000 bpd (reduced ~40%)",
-    impact: "High", confidence: "Confirmed",
-    source: "Reuters, 11 Mar 2026"
-  },
-  {
-    id: 7,
-    company: "Kuwait Petroleum — Mina Abdullah",
-    country: "Kuwait",
-    lat: 28.9700, lng: 48.1600,
-    // Mina Abdullah Refinery: 28°58'N 48°09'E ✓
-    status: "Reduced", type: "Precautionary reduction — force majeure declared",
-    start: "2026-03-11",
-    products: ["Diesel", "Gasoline", "Asphalt", "Fuel oil"],
-    capacity: "270,000 bpd (reduced ~30%)",
-    impact: "Medium", confidence: "Confirmed",
-    source: "Reuters, 11 Mar 2026"
-  },
-  {
-    id: 8,
-    company: "KNPC — Shuaiba Refinery (Shut Aux Units)",
-    country: "Kuwait",
-    lat: 29.0280, lng: 48.1350,
-    // Shuaiba Industrial Area: 29°01'40"N 48°08'06"E ✓
-    status: "Reduced", type: "Force majeure — precautionary rate reduction",
-    start: "2026-03-11",
-    products: ["Naphtha", "LPG", "Gasoline"],
-    capacity: "200,000 bpd (reduced)",
-    impact: "Medium", confidence: "Confirmed",
-    source: "Reuters, 11 Mar 2026"
-  },
-  {
-    id: 9,
-    company: "Iran — Kharg Island Export Terminal",
-    country: "Iran",
-    lat: 29.2453, lng: 50.3228,
-    // Kharg Island: 29°14'43"N 50°19'22"E ✓
-    status: "Shutdown", type: "Military strikes — crude export terminal attacked",
-    start: "2026-03-02",
-    products: ["Crude oil (~90% of Iran total exports)"],
-    capacity: "~2.5 Mbpd export capacity",
-    impact: "High", confidence: "Likely",
-    source: "Reuters, 2 Mar 2026"
-  },
-  {
-    id: 10,
-    company: "Iran — South Pars Gas Complex",
-    country: "Iran",
-    lat: 27.4600, lng: 52.6900,
-    // South Pars / Assaluyeh: 27°27'N 52°41'E ✓
-    status: "Reduced", type: "Israeli strike damage — partial outage",
-    start: "2026-03-01",
-    products: ["Natural gas", "Condensate", "LPG", "Sulfur"],
-    capacity: "~800 mmcm/day (~70% of Iran domestic gas)",
-    impact: "High", confidence: "Confirmed",
-    source: "Reuters / Iranian state TV, 1 Mar 2026"
-  },
-  {
-    id: 11,
-    company: "Chevron — Leviathan Gas Field",
-    country: "Israel",
-    lat: 31.9000, lng: 33.8200,
-    // Leviathan field, offshore Mediterranean: ~31°54'N 33°49'E ✓
-    status: "Shutdown", type: "Israeli govt instruction — precautionary",
-    start: "2026-03-02",
-    products: ["Natural gas", "LNG feedstock"],
-    capacity: "~21 bcm/yr",
-    impact: "Medium", confidence: "Confirmed",
-    source: "Reuters / Chevron, 2 Mar 2026"
-  },
-  {
-    id: 12,
-    company: "Energean — Karish Gas Field",
-    country: "Israel",
-    lat: 32.6300, lng: 34.5200,
-    // Karish field, offshore Israel: ~32°38'N 34°31'E ✓
-    status: "Shutdown", type: "Precautionary halt — conflict zone",
-    start: "2026-03-02",
-    products: ["Natural gas"],
-    capacity: "~8 bcm/yr",
-    impact: "Medium", confidence: "Confirmed",
-    source: "Reuters / Energean, 2 Mar 2026"
-  },
-  {
-    id: 13,
-    company: "DNO / Gulf Keystone — Kurdistan Fields",
-    country: "Iraq",
-    lat: 36.1901, lng: 44.0091,
-    // Erbil/Dohuk region, Kurdistan: 36°11'N 44°00'E ✓
-    status: "Shutdown", type: "Precautionary halt — no damage reported",
-    start: "2026-03-02",
-    products: ["Crude oil"],
-    capacity: "~200,000 bpd combined",
-    impact: "Medium", confidence: "Confirmed",
-    source: "Reuters / DNO, 2 Mar 2026"
-  },
-  {
-    id: 14,
-    company: "EQUATE — Shuaiba Petrochemical",
-    country: "Kuwait",
-    lat: 29.0200, lng: 48.1200,
-    // EQUATE Shuaiba, Kuwait: 29°01'N 48°07'E ✓
-    status: "Reduced", type: "Feedstock & shipping disruption — Hormuz closure",
-    start: "2026-03-08",
-    products: ["Ethylene glycol (MEG)", "Polyethylene", "Ethylene oxide"],
-    capacity: "~3.2 Mt/yr",
-    impact: "High", confidence: "Likely",
-    source: "Argus Media, 8 Mar 2026"
-  },
-  {
-    id: 15,
-    company: "SABIC — Yanbu Petrochemical Complex",
-    country: "Saudi Arabia",
-    lat: 24.0889, lng: 38.0633,
-    // Yanbu Industrial City, Red Sea: 24°05'20"N 38°03'48"E ✓
-    status: "Reduced", type: "Feedstock disruption — Hormuz rerouting impact",
-    start: "2026-03-06",
-    products: ["Ethylene", "Polyethylene", "Methanol", "MTBE"],
-    capacity: "~4 Mt/yr (partial reduction)",
-    impact: "Medium", confidence: "Likely",
-    source: "Argus Media / Bloomberg, 6 Mar 2026"
-  }
-];
-
-const API_URL   = 'https://example.com/disruptions.json';
-const REFRESH   = 10 * 60 * 1000;
+const API_URL = 'https://example.com/disruptions.json'; // replace with real endpoint
+const REFRESH = 10 * 60 * 1000;
 
 let allData = [];
 let filters = { status: 'all', impact: 'all' };
 let globe;
 let rotTimer;
+let selectedPoint = null;
 
-// ── Globe ────────────────────────────────────────────────────────────────────
+// ── Globe ─────────────────────────────────────────
 function initGlobe() {
   const el = document.getElementById('globeViz');
 
@@ -592,167 +16,152 @@ function initGlobe() {
     .width(el.clientWidth)
     .height(el.clientHeight)
     .backgroundColor('#060a0d')
-    // NASA Blue Marble — real Earth colours: blue ocean, green land, white ice/snow
-    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-    .atmosphereColor('#3a7fff')
-    .atmosphereAltitude(0.15)
+
+    // DARK BLOOMBERG STYLE
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
+
+    .atmosphereColor('#1a8fff')
+    .atmosphereAltitude(0.08)
+
     .pointsData([])
     .pointLat(d => d.lat)
     .pointLng(d => d.lng)
-    .pointAltitude(0.018)
-    .pointRadius(d => d.impact === 'High' ? 0.65 : d.impact === 'Medium' ? 0.48 : 0.34)
-    .pointColor(d => markerColor(d.status))
-    .pointResolution(14)
-    .onPointHover(onHover)
-    .onPointClick(onClick)
-    .pointsMerge(false);
 
-  // Start centred on the Middle East / Persian Gulf
+    // BETTER VISIBILITY
+    .pointAltitude(d => d.impact === 'High' ? 0.06 : 0.035)
+    .pointRadius(d => d.impact === 'High' ? 0.9 : d.impact === 'Medium' ? 0.7 : 0.55)
+
+    // CLEAN COLORS
+    .pointColor(d => {
+      if (d.status === 'Shutdown') return '#ff4d4d';
+      if (d.status === 'Reduced') return '#ffcc33';
+      return '#4db8ff';
+    })
+
+    .pointResolution(16)
+    .pointLabel(() => '')
+
+    .onPointHover(onHover)
+    .onPointClick(onClick);
+
   globe.pointOfView({ lat: 27, lng: 51, altitude: 1.9 }, 0);
 
-  globe.controls().autoRotate      = true;
-  globe.controls().autoRotateSpeed = 0.15;
-  globe.controls().enableZoom      = true;
-  globe.controls().zoomSpeed       = 0.7;
-  globe.controls().minDistance     = 130;
-  globe.controls().maxDistance     = 800;
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.08;
 
-  el.addEventListener('mousedown',  pauseRot);
-  el.addEventListener('touchstart', pauseRot, { passive: true });
-
-  window.addEventListener('resize', () => globe.width(el.clientWidth).height(el.clientHeight));
-
-  // Lighting — warm sunlight from upper-right, cool fill from left
-  const scene = globe.scene();
-  scene.add(new THREE.AmbientLight(0x152535, 2.4));
-  const sun = new THREE.DirectionalLight(0xfff0d0, 1.1);
-  sun.position.set(2, 1, 1);
-  scene.add(sun);
-  const fill = new THREE.DirectionalLight(0x1a4080, 0.35);
-  fill.position.set(-1, -0.5, -1);
-  scene.add(fill);
+  window.addEventListener('resize', () => {
+    globe.width(el.clientWidth).height(el.clientHeight);
+  });
 }
 
-function pauseRot() {
+// ── INTERACTION FIXES ─────────────────────────────
+function onClick(pt, evt) {
+  if (!pt) return;
+
+  selectedPoint = pt;
+
   globe.controls().autoRotate = false;
   clearTimeout(rotTimer);
-  rotTimer = setTimeout(() => globe.controls().autoRotate = true, 5000);
+
+  showTip(pt, evt);
 }
 
-function markerColor(s) {
-  return s === 'Shutdown' ? '#ff3030' : s === 'Reduced' ? '#f0b429' : '#38b2ff';
+function onHover(pt, _, evt) {
+  if (selectedPoint) return;
+  pt ? showTip(pt, evt) : hideTip();
 }
 
-// ── Tooltip ──────────────────────────────────────────────────────────────────
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#tooltip') && !e.target.closest('canvas')) {
+    selectedPoint = null;
+    hideTip();
+    globe.controls().autoRotate = true;
+  }
+});
+
+// ── TOOLTIP ───────────────────────────────────────
 const tip = document.getElementById('tooltip');
 
-function onHover(pt, _p, evt) { pt ? showTip(pt, evt) : hideTip(); }
-function onClick(pt, evt)     { if (pt) showTip(pt, evt); }
-
 function showTip(d, evt) {
-  document.getElementById('tt-co').textContent   = d.company;
+  document.getElementById('tt-co').textContent = d.company;
   document.getElementById('tt-ctry').textContent = d.country;
 
-  const sc = d.status === 'Shutdown' ? 's-red' : d.status === 'Reduced' ? 's-yellow' : 's-blue';
-  document.getElementById('tt-status').innerHTML =
-    `<span class="spill ${sc}">${d.status}</span>&nbsp;<span style="color:var(--text-dim);font-size:8px">${d.type}</span>`;
-
+  document.getElementById('tt-status').innerHTML = d.status;
   document.getElementById('tt-start').textContent = d.start;
-  document.getElementById('tt-prod').textContent  = Array.isArray(d.products) ? d.products.join(', ') : d.products;
-  document.getElementById('tt-cap').textContent   = d.capacity;
+  document.getElementById('tt-prod').textContent = d.products.join(', ');
+  document.getElementById('tt-cap').textContent = d.capacity;
+  document.getElementById('tt-imp').textContent = d.impact;
+  document.getElementById('tt-conf').textContent = d.confidence;
+  document.getElementById('tt-src').textContent = d.source;
 
-  const ic = d.impact === 'High' ? 'imp-high' : d.impact === 'Medium' ? 'imp-med' : 'imp-low';
-  document.getElementById('tt-imp').innerHTML  = `<span class="${ic}">${d.impact}</span>`;
+  const x = evt.clientX;
+  const y = evt.clientY;
 
-  const cc = d.confidence === 'Confirmed' ? 'conf-confirmed' : d.confidence === 'Likely' ? 'conf-likely' : 'conf-unverified';
-  document.getElementById('tt-conf').innerHTML = `<span class="${cc}">${d.confidence}</span>`;
+  tip.style.left = (x + 15) + 'px';
+  tip.style.top = (y - 15) + 'px';
 
-  document.getElementById('tt-src').textContent = d.source || '—';
-
-  const mx = evt ? evt.clientX : window.innerWidth  / 2;
-  const my = evt ? evt.clientY : window.innerHeight / 2;
-  moveTip(mx, my);
   tip.classList.add('visible');
-  if (evt && evt.type !== 'click') document.onmousemove = e => moveTip(e.clientX, e.clientY);
-}
-
-function moveTip(x, y) {
-  const tw = 295, th = 235, m = 14;
-  let tx = x + m, ty = y - m;
-  if (tx + tw > window.innerWidth)  tx = x - tw - m;
-  if (ty + th > window.innerHeight) ty = y - th - m;
-  if (ty < 62) ty = 62;
-  tip.style.left = tx + 'px';
-  tip.style.top  = ty + 'px';
 }
 
 function hideTip() {
   tip.classList.remove('visible');
-  document.onmousemove = null;
 }
 
-document.getElementById('globeViz').addEventListener('mouseleave', hideTip);
-
-// ── Data fetch ───────────────────────────────────────────────────────────────
+// ── DATA FETCH ───────────────────────────────────
 async function fetchData() {
   try {
-    const ctrl = new AbortController();
-    const t    = setTimeout(() => ctrl.abort(), 7000);
-    const res  = await fetch(API_URL, { signal: ctrl.signal });
-    clearTimeout(t);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const res = await fetch(API_URL);
     const json = await res.json();
-    if (!Array.isArray(json) || json.length === 0) throw new Error('Empty');
+
+    if (!Array.isArray(json)) throw new Error();
+
     allData = json;
     document.getElementById('error-banner').style.display = 'none';
   } catch {
     allData = FALLBACK_DATA;
-    const eb = document.getElementById('error-banner');
-    eb.style.display = 'block';
-    setTimeout(() => eb.style.display = 'none', 7000);
+    document.getElementById('error-banner').style.display = 'block';
   }
+
   renderGlobe();
   renderStats();
-  document.getElementById('upd-time').textContent = new Date().toLocaleTimeString();
+
+  document.getElementById('upd-time').textContent =
+    new Date().toLocaleTimeString() + " (live)";
 }
 
+// ── RENDER ───────────────────────────────────────
 function getVisible() {
   return allData.filter(d => {
     if (filters.status !== 'all' && d.status !== filters.status) return false;
     if (filters.impact !== 'all' && d.impact !== filters.impact) return false;
     return true;
-  }).slice(0, 250);
+  });
 }
 
-function renderGlobe() { if (globe) globe.pointsData(getVisible()); }
+function renderGlobe() {
+  globe.pointsData(getVisible());
+}
 
 function renderStats() {
-  document.getElementById('cnt-sd').textContent = allData.filter(d => d.status === 'Shutdown').length;
-  document.getElementById('cnt-rd').textContent = allData.filter(d => d.status === 'Reduced').length;
-  document.getElementById('cnt-mt').textContent = allData.filter(d => d.status === 'Maintenance').length;
+  document.getElementById('cnt-sd').textContent =
+    allData.filter(d => d.status === 'Shutdown').length;
+  document.getElementById('cnt-rd').textContent =
+    allData.filter(d => d.status === 'Reduced').length;
+  document.getElementById('cnt-mt').textContent =
+    allData.filter(d => d.status === 'Maintenance').length;
 }
 
-// ── Filters ───────────────────────────────────────────────────────────────────
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const f = btn.dataset.f, v = btn.dataset.v;
-    filters[f] = v;
-    document.querySelectorAll(`.filter-btn[data-f="${f}"]`).forEach(b =>
-      b.classList.toggle('active', b.dataset.v === v));
-    renderGlobe();
-  });
+// ── MANUAL REFRESH (press R) ─────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'r') fetchData();
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────
 async function boot() {
   initGlobe();
   await fetchData();
-  setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 800);
   setInterval(fetchData, REFRESH);
 }
 
 window.addEventListener('load', boot);
 </script>
-</body>
-</html>
